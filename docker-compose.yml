@@ -1,0 +1,27 @@
+# Smart Agriculture Advisory - one-command stack:
+#   docker compose up --build
+# then open http://localhost:5173
+services:
+  backend:
+    build: ./backend
+    container_name: smart-agri-backend
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Browser calls this URL directly (host-published backend port).
+        VITE_API_URL: http://localhost:8000
+    container_name: smart-agri-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
