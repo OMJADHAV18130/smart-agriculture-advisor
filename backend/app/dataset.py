@@ -25,9 +25,10 @@ import csv
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from .config import settings
 from .engine import Fact
 
-DATA_FILE = Path(__file__).resolve().parent.parent / "data" / "cleaned_crop_recommendation.csv"
+DATA_FILE = settings.DATA_FILE_PATH
 NUMERIC_COLUMNS = ("N", "P", "K", "temperature", "humidity", "ph", "rainfall")
 
 # Human-friendly units used when describing a deviation to the user.

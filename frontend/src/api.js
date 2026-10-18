@@ -1,7 +1,9 @@
 // Small helper module for talking to the FastAPI backend.
-// VITE_API_URL is inlined at build time (Docker images set it via build arg);
+// VITE_API_URL is configured via Vite environment variables (.env, build args);
 // local dev falls back to the uvicorn default.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const RAW_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = RAW_API_URL.replace(/\/+$/, '')
+
 
 async function handleJson(response) {
   const data = await response.json().catch(() => ({}))

@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import dataset
+from .config import settings
 from .engine import backward_chain, forward_chain
 from .knowledge_base import (
     AVAILABLE_GOALS,
@@ -40,11 +41,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Allow the local Vite dev server (http://localhost:5173) to call this API.
+# Configure CORS origins based on environment (ALLOWED_ORIGINS)
+allow_all = "*" in settings.ALLOWED_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all else settings.ALLOWED_ORIGINS,
+    allow_credentials=not allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -102,10 +104,12 @@ def _build_summary(issue_facts: list, fired_count: int) -> Summary:
 def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
+        environment=settings.ENVIRONMENT,
         rules_loaded=len(RULES),
         thresholds=THRESHOLDS,
         dataset=dataset.dataset_info(),
     )
+
 
 
 @app.get("/crops")
@@ -196,3 +200,16 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         ),
         note=DISCLAIMER,
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=(settings.ENVIRONMENT == "development"),
+        log_level=settings.LOG_LEVEL,
+    )
+

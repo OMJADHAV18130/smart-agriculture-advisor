@@ -1,14 +1,21 @@
 # Smart Agriculture Advisory - one-command stack:
 #   docker compose up --build
-# then open http://localhost:5173
+# then open http://localhost:5173 (or $FRONTEND_PORT)
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
     container_name: smart-agri-backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=${BACKEND_PORT:-8000}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request, os; port = os.environ.get('PORT', '8000'); urllib.request.urlopen(f'http://localhost:{port}/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -18,10 +25,12 @@ services:
       context: ./frontend
       args:
         # Browser calls this URL directly (host-published backend port).
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     container_name: smart-agri-frontend
     ports:
-      - "5173:80"
+      - "${FRONTEND_PORT:-5173}:80"
+    environment:
+      - NODE_ENV=production
     depends_on:
       backend:
         condition: service_healthy

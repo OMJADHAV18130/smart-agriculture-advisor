@@ -98,6 +98,8 @@ class AnalyzeResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+    environment: Optional[str] = "development"
     rules_loaded: int
     thresholds: dict
     dataset: dict
+

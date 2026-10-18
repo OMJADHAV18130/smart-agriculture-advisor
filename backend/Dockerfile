@@ -12,6 +12,12 @@ COPY app ./app
 COPY data ./data
 COPY tests ./tests
 
+ENV HOST=0.0.0.0 \
+    PORT=8000 \
+    ENVIRONMENT=production \
+    LOG_LEVEL=info
+
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn app.main:app --host ${HOST} --port ${PORT} --log-level ${LOG_LEVEL}
+

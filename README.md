@@ -16,7 +16,12 @@ readable reasoning trace.
 
 ```
 smart-agriculture-advisor/
+├── .env.example               # Full-stack / Docker Compose environment template
+├── docker-compose.yml         # Containerized multi-service orchestration
 ├── frontend/                  # React + Vite + plain CSS
+│   ├── .env.example           # Frontend environment template (VITE_API_URL)
+│   ├── Dockerfile             # Multi-stage build + Nginx static server
+│   ├── nginx.conf             # Nginx reverse proxy / static asset config
 │   ├── index.html
 │   ├── package.json
 │   ├── vite.config.js
@@ -24,20 +29,28 @@ smart-agriculture-advisor/
 │       ├── App.jsx            # Dashboard: form + results panel
 │       ├── App.css            # Green-and-white theme
 │       ├── index.css          # Global styles / CSS variables
-│       ├── api.js             # Fetch helpers for the backend API
+│       ├── api.js             # Fetch helpers with configurable API URL
 │       └── main.jsx           # React entry point
 ├── backend/                   # Python FastAPI
-│   ├── requirements.txt
+│   ├── .env.example           # Backend environment template
+│   ├── Dockerfile             # Container definition with dynamic PORT/HOST
+│   ├── requirements.txt       # Dependencies (FastAPI, uvicorn, python-dotenv, etc.)
 │   ├── app/
-│   │   ├── main.py            # API routes (/health, /goals, /analyze) + CORS
+│   │   ├── main.py            # API routes (/health, /goals, /analyze) + dynamic CORS
+│   │   ├── config.py          # Centralized environment configuration
 │   │   ├── engine.py          # Forward & backward chaining inference engine
 │   │   ├── knowledge_base.py  # IF-THEN rules, thresholds, labels
-│   │   └── schemas.py         # Pydantic request/response models
+│   │   ├── schemas.py         # Pydantic request/response models
+│   │   └── dataset.py         # Crop dataset loader & statistics
+│   ├── data/                  # Cleaned crop recommendation dataset CSV
 │   └── tests/
-│       └── test_engine.py     # Sample forward & backward chaining tests
+│       ├── test_config.py     # Configuration & origins parsing tests
+│       ├── test_dataset.py    # Dataset tests
+│       └── test_engine.py     # Inference engine tests
 ├── .gitignore
 └── README.md
 ```
+
 
 ## Requirements
 
@@ -199,6 +212,70 @@ across five areas:
 (`THRESHOLDS` dict) and are reported by `/health`. They are labeled
 **illustrative demo values**, not agronomic standards.
 
+## Environment Variables & Configuration
+
+The application is fully configurable via environment variables or `.env` files. Templates are provided for each tier.
+
+### Backend Environment Variables (`backend/.env` or root `.env`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENVIRONMENT` | `development` | Runtime environment (`development`, `staging`, `production`) |
+| `HOST` | `0.0.0.0` | IP address to bind FastAPI server |
+| `PORT` | `8000` | Port to listen on (automatically used by Docker and cloud PaaS like Render/Cloud Run) |
+| `ALLOWED_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed CORS origins, or `*` to allow all origins |
+| `LOG_LEVEL` | `info` | Uvicorn logging verbosity (`debug`, `info`, `warning`, `error`) |
+| `DATASET_PATH` | `data/cleaned_crop_recommendation.csv` | *(Optional)* Override path to the crop reference CSV |
+
+### Frontend Environment Variables (`frontend/.env` or build environment)
+
+| Variable | Default | Description |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8000` | Base URL of the FastAPI backend (e.g. `https://api.yourdomain.com`) |
+
+---
+
+## Deployment Guide
+
+### Option 1: Docker Compose (One-Command Full Stack)
+
+Run both the frontend and backend in production-ready containers:
+
+```bash
+# 1. (Optional) Customize environment values
+cp .env.example .env
+
+# 2. Build and launch
+docker compose up --build
+```
+
+- Frontend: **http://localhost:5173** (or your configured `FRONTEND_PORT`)
+- Backend: **http://localhost:8000** (or your configured `BACKEND_PORT`)
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+### Option 2: Cloud PaaS Deployment (Render / Railway / Fly.io / GCP Cloud Run)
+
+#### Backend Deployment:
+1. Deploy `backend/` using Docker or Python runtime.
+2. Set environment variables in the service dashboard:
+   - `ENVIRONMENT=production`
+   - `ALLOWED_ORIGINS=https://your-frontend-domain.com`
+   - `PORT=8000` (or leave default if the platform assigns dynamic `$PORT`)
+3. Health check path: `/health`
+
+#### Frontend Deployment (Vercel / Netlify / Cloudflare Pages):
+1. Connect the repository and set root directory to `frontend/`.
+2. Build command: `npm run build`
+3. Output directory: `dist`
+4. Set build environment variable:
+   - `VITE_API_URL=https://your-backend-service.up.railway.app` (your actual backend URL)
+
+---
+
 ## Conservative-advice policy
 
 - Symptoms always suggest **possible** causes, never confirmed diagnoses.
@@ -206,7 +283,7 @@ across five areas:
 - Every response carries a disclaimer asking users to consult a local
   agronomy expert.
 
-## Deliberately out of scope (simplicity)
+## Architectural Scope & Simplicity
 
-No database, authentication, Docker, external APIs, LLMs, sensors, or
-machine learning — only FastAPI, Pydantic, and React/Vite.
+A lightweight, transparent symbolic AI system without database, authentication, external third-party APIs, or heavy ML models — built purely with FastAPI, Pydantic, and React/Vite for inspectable rule-based inference.
+
